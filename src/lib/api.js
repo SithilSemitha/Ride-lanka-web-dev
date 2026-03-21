@@ -84,6 +84,26 @@ export async function fetchPlaceCulture(token, place_name) {
 
 // ─── Event tracking ────────────────────────────────────────────────────────
 
+export async function saveUserTrip(token, tripData) {
+    const url = `${BACKEND}/api/users/trips`;
+    const res = await safeFetch(url, {
+        method: "POST",
+        headers: await authHeaders(token),
+        body: JSON.stringify(tripData),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+export async function getUserTrips(token) {
+    const url = `${BACKEND}/api/users/trips`;
+    const res = await safeFetch(url, {
+        headers: await authHeaders(token),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
 export async function trackEvent(token, { place_name, category, action }) {
     // Fire-and-forget — don't block the UI
     const url = `${BACKEND}/api/events`;

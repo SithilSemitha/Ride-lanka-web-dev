@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Sidebar from "../Sidebar";
 import { useAuth } from "@/context/AuthContext";
-import { generateTripPlan, fetchPlaceCulture } from "@/lib/api";
+import { generateTripPlan, fetchPlaceCulture, getUserTrips, saveUserTrip } from "@/lib/api";
 
 const FAVORITE_CATEGORIES = [
   {
@@ -79,13 +79,11 @@ function buildMapEmbedUrl(stops) {
 export default function TripsScreen({ active, showScreen }) {
   const { token } = useAuth();
 
-  const trips = [
-    { title: "Maldives Honeymoon", img: "https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=300&q=80", dates: "Mar 15 - Mar 22, 2026", travelers: "2 travelers", budget: "$3,408", progress: 35, status: "upcoming", statusLabel: "Upcoming" },
-    { title: "Greek Islands Tour", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&q=80", dates: "Feb 28 - Mar 8, 2026", travelers: "4 travelers", budget: "$5,200", progress: 80, status: "active", statusLabel: "Active" },
-    { title: "Bali Family Retreat", img: "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=300&q=80", dates: "Dec 20 - Dec 30, 2025", travelers: "5 travelers", budget: "$4,100", progress: 100, status: "completed", statusLabel: "Completed" },
-  ];
+  const [userTrips, setUserTrips] = useState([]);
+  const [loadingTrips, setLoadingTrips] = useState(true);
+  const [activeTrip, setActiveTrip] = useState(null);
 
-  const [mode, setMode] = useState("list");
+  const [mode, setMode] = useState("list"); // list, new, view
   const [tripName, setTripName] = useState("");
   const [tripDate, setTripDate] = useState("");
   const [stopCount, setStopCount] = useState(3);
@@ -100,6 +98,25 @@ export default function TripsScreen({ active, showScreen }) {
 
   const mapEmbedUrl = useMemo(() => buildMapEmbedUrl(plannedStops), [plannedStops]);
   const listMapEmbedUrl = useMemo(() => buildMapEmbedUrl([]), []);
+  const activeTripMapUrl = useMemo(() => buildMapEmbedUrl(activeTrip?.stops || []), [activeTrip]);
+
+  useEffect(() => {
+    if (token && active) {
+      loadTrips();
+    }
+  }, [token, active]);
+
+  async function loadTrips() {
+    try {
+      setLoadingTrips(true);
+      const data = await getUserTrips(token);
+      setUserTrips(data.trips || []);
+    } catch (err) {
+      console.error("Failed to load trips", err);
+    } finally {
+      setLoadingTrips(false);
+    }
+  }
 
   const mapTitle = useMemo(() => {
     const safeName = tripName.trim();
@@ -127,6 +144,30 @@ export default function TripsScreen({ active, showScreen }) {
       alert(err.message || "Failed to load insights");
     } finally {
       setLoadingCultureId(null);
+    }
+  }
+
+  async function handleSaveTrip() {
+    try {
+      setLoadingPlan(true);
+      await saveUserTrip(token, {
+        trip_name: tripName,
+        trip_date: tripDate,
+        stop_count: stopCount,
+        favorites,
+        stops: plannedStops
+      });
+      setMode("list");
+      setTripName("");
+      setPlannedStops([]);
+      setFavorites(["hiking", "dance"]);
+      setIsEditing(true);
+      loadTrips(); 
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save trip.");
+    } finally {
+      setLoadingPlan(false);
     }
   }
 
@@ -192,7 +233,7 @@ export default function TripsScreen({ active, showScreen }) {
                   type="button"
                   className="btn-teal"
                   style={{ width: "auto", padding: "12px 24px", background: "var(--gray-100)", color: "var(--gray-600)" }}
-                  onClick={() => setMode("list")}
+                  onClick={() => { setMode("list"); setActiveTrip(null); }}
                 >
                   ← Back to trips
                 </button>
@@ -208,26 +249,33 @@ export default function TripsScreen({ active, showScreen }) {
                   <div className="step-btn">Active</div>
                   <div className="step-btn">Completed</div>
                 </div>
-                {trips.map((t, i) => (
-                  <div key={i} className="trip-card">
-                    <div className="trip-card-img"><img src={t.img} alt={t.title} /></div>
-                    <div className="trip-card-body">
-                      <h4>{t.title}</h4>
-                      <div className="meta">
-                        <span>📅 {t.dates}</span>
-                        <span>👥 {t.travelers}</span>
-                        <span>💰 {t.budget} budget</span>
-                      </div>
-                      <div style={{ marginTop: 8, background: "var(--gray-100)", borderRadius: 50, height: 6, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${t.progress}%`, background: t.status === "completed" ? "var(--gray-400)" : t.status === "active" ? "#10b981" : "var(--teal)", borderRadius: 50 }} />
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--gray-400)", marginTop: 4 }}>
-                        {t.status === "completed" ? "Trip completed" : `Planning: ${t.progress}% complete`}
-                      </div>
-                    </div>
-                    <div className={`trip-status status-${t.status}`}>{t.statusLabel}</div>
+                {loadingTrips ? (
+                  <div style={{ padding: 20, textAlign: "center", color: "var(--gray-500)" }}>Loading your trips...</div>
+                ) : userTrips.length === 0 ? (
+                  <div style={{ padding: 40, textAlign: "center", color: "var(--gray-500)", background: "white", borderRadius: 16, marginTop: 20 }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+                    <h3 style={{ color: "var(--gray-800)", marginBottom: 8 }}>No trips saved yet</h3>
+                    <p>Click "New Trip" to start planning your adventure!</p>
                   </div>
-                ))}
+                ) : userTrips.map((t, i) => {
+                  const firstStopPhoto = t.stops?.[0]?.photo_url || "https://images.unsplash.com/photo-1544487661-04e8d38cb71f?w=300&q=80";
+                  return (
+                    <div key={t.id || i} className="trip-card" onClick={() => { setActiveTrip(t); setMode("view"); }} style={{ cursor: "pointer" }}>
+                      <div className="trip-card-img"><img src={firstStopPhoto} alt={t.trip_name} style={{ objectFit: "cover", width: "100%", height: "100%" }} /></div>
+                      <div className="trip-card-body">
+                        <h4>{t.trip_name}</h4>
+                        <div className="meta" style={{ marginTop: 6 }}>
+                          <span>📅 {t.trip_date || "Upcoming"}</span>
+                          <span>📍 {t.stop_count || t.stops?.length || 0} stops</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--gray-500)", marginTop: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          Starts at: {t.stops?.[0]?.name || "Unknown"}
+                        </div>
+                      </div>
+                      <div className={`trip-status status-active`} style={{ background: "var(--teal-light)", color: "var(--teal-dark)", fontWeight: 700 }}>Start Route</div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="map-panel">
                 <div className="map-placeholder" style={{ padding: 0, display: "flex", alignItems: "stretch", justifyContent: "center" }}>
@@ -254,6 +302,72 @@ export default function TripsScreen({ active, showScreen }) {
                       />
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          ) : mode === "view" && activeTrip ? (
+            <div className="view-trip-layout" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 22 }}>
+              <div className="new-trip-map">
+                <div className="map-panel" style={{ position: "relative", top: 0, height: "100%", minHeight: 580 }}>
+                  <div className="map-placeholder" style={{ padding: 0, alignItems: "stretch", justifyContent: "center", display: "flex" }}>
+                    {activeTripMapUrl && (
+                      <div style={{ width: "94%", height: "92%", margin: "3%", borderRadius: 18, overflow: "hidden", boxShadow: "0 10px 25px rgba(0,0,0,0.12)", background: "#e5f7fb" }}>
+                        <iframe title="Active trip route" src={activeTripMapUrl} width="100%" height="100%" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="new-trip-details" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div className="new-trip-card" style={{ background: "white", borderRadius: 16, boxShadow: "var(--shadow-sm)", padding: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                    <div>
+                      <h3 style={{ fontSize: 20, fontWeight: 800 }}>{activeTrip.trip_name}</h3>
+                      <div style={{ fontSize: 13, color: "var(--gray-500)", marginTop: 4 }}>Started Route • {activeTrip.trip_date || "Today"}</div>
+                    </div>
+                    <div className="pill pill-teal" style={{ background: "#10b981", color: "white" }}>Active</div>
+                  </div>
+                  
+                  <div style={{ marginTop: 24, borderTop: "1px solid var(--gray-200)", paddingTop: 18 }}>
+                    <h4 style={{ marginBottom: 12, fontSize: 16, fontWeight: 800 }}>Start Driving ({activeTrip.stops?.length || 0} stops)</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "calc(100vh - 280px)", overflowY: "auto", paddingRight: 8 }}>
+                      {(activeTrip.stops || []).map((stop, i) => (
+                         <div key={i} style={{ background: "var(--gray-50)", padding: 14, borderRadius: 12, border: "1px solid var(--gray-100)" }}>
+                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                             <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 800, color: "var(--teal-dark)" }}>{stop.stop_order}. {stop.name}</div>
+                                <div style={{ fontSize: 13, color: "var(--gray-500)", marginTop: 6, lineHeight: 1.4 }}>{stop.description}</div>
+                             </div>
+                             <button 
+                                onClick={() => handleGetCulture(stop.stop_order, stop.name)}
+                                disabled={loadingCultureId === stop.stop_order}
+                                style={{
+                                  border: "1px solid var(--teal)", background: cultureData[stop.stop_order] ? "var(--teal)" : "transparent",
+                                  color: cultureData[stop.stop_order] ? "white" : "var(--teal)", padding: "6px 10px", borderRadius: 6,
+                                  fontSize: 12, fontWeight: 700, cursor: "pointer", marginLeft: 12, whiteSpace: "nowrap", transition: "0.2s"
+                                }}
+                             >
+                                {loadingCultureId === stop.stop_order ? "..." : (cultureData[stop.stop_order] ? "Hide Info" : "📖 Insights")}
+                             </button>
+                           </div>
+                           {stop.stop_note && <div style={{ fontSize: 12, color: "var(--teal)", marginTop: 8, fontWeight: 600 }}>💡 {stop.stop_note}</div>}
+                           
+                           {cultureData[stop.stop_order] && (
+                             <div style={{ marginTop: 12, borderTop: "1px dashed var(--gray-200)", paddingTop: 12, animation: "fadeIn 0.3s" }}>
+                               <h5 style={{ fontSize: 13, marginBottom: 8, color: "var(--gray-800)" }}>Local Culture & Seasons:</h5>
+                               <div style={{ fontSize: 12, color: "var(--gray-600)", display: "flex", flexDirection: "column", gap: 6 }}>
+                                  <div><strong>👕 Dress Code:</strong> {cultureData[stop.stop_order].dress_code}</div>
+                                  <div><strong>🛑 Behavior Rules:</strong> {cultureData[stop.stop_order].behavior_rules}</div>
+                                  <div><strong>🌤️ Best Season:</strong> {cultureData[stop.stop_order].best_season}</div>
+                                  <div><strong>🏛️ Context:</strong> {cultureData[stop.stop_order].historical_context}</div>
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -389,15 +503,27 @@ export default function TripsScreen({ active, showScreen }) {
                         ✎ Edit Details
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="btn-teal"
-                      style={{ width: "auto", padding: "14px 18px", background: "white", color: "var(--teal)", border: "1.5px solid var(--gray-200)" }}
-                      onClick={() => setMode("list")}
-                      disabled={loadingPlan}
-                    >
-                      {plannedStops.length > 0 && !isEditing ? "Done" : "Cancel"}
-                    </button>
+                    {plannedStops.length > 0 && !isEditing ? (
+                      <button
+                        type="button"
+                        className="btn-teal"
+                        style={{ width: "auto", padding: "14px 18px" }}
+                        onClick={handleSaveTrip}
+                        disabled={loadingPlan}
+                      >
+                        Save Trip
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-teal"
+                        style={{ width: "auto", padding: "14px 18px", background: "white", color: "var(--teal)", border: "1.5px solid var(--gray-200)" }}
+                        onClick={() => setMode("list")}
+                        disabled={loadingPlan}
+                      >
+                        Cancel
+                      </button>
+                    )}
                   </div>
 
                   {plannedStops.length > 0 && (
