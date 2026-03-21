@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import Sidebar from "../Sidebar";
 import { useAuth } from "@/context/AuthContext";
-import { generateTripPlan, fetchPlaceCulture, getUserTrips, saveUserTrip } from "@/lib/api";
+import { generateTripPlan, fetchPlaceCulture, getUserTrips, saveUserTrip, searchAndAddPlace } from "@/lib/api";
 
 const FAVORITE_CATEGORIES = [
   {
@@ -87,6 +87,10 @@ export default function TripsScreen({ active, showScreen }) {
   const [tripName, setTripName] = useState("");
   const [tripDate, setTripDate] = useState("");
   const [stopCount, setStopCount] = useState(3);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
   const [favorites, setFavorites] = useState(["hiking", "dance"]);
   const [plannedStops, setPlannedStops] = useState([]);
   const [aiSource, setAiSource] = useState("");
@@ -168,6 +172,25 @@ export default function TripsScreen({ active, showScreen }) {
       alert("Failed to save trip.");
     } finally {
       setLoadingPlan(false);
+    }
+  }
+
+  async function handleSearchPlace(e) {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const result = await searchAndAddPlace(token, searchQuery.trim());
+      // Append to plannedStops
+      const newOrder = plannedStops.length + 1;
+      const newStop = { ...result, stop_order: newOrder, category: result.category || "general" };
+      setPlannedStops((prev) => [...prev, newStop]);
+      setSearchQuery("");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to search place");
+    } finally {
+      setIsSearching(false);
     }
   }
 
@@ -528,7 +551,29 @@ export default function TripsScreen({ active, showScreen }) {
 
                   {plannedStops.length > 0 && (
                     <div style={{ marginTop: 24, borderTop: "1px solid var(--gray-200)", paddingTop: 18 }}>
-                      <h4 style={{ marginBottom: 12, fontSize: 16, fontWeight: 800 }}>Your AI Route ({plannedStops.length} stops)</h4>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                        <h4 style={{ fontSize: 16, fontWeight: 800 }}>Your AI Route ({plannedStops.length} stops)</h4>
+                      </div>
+                      
+                      {!isEditing && (
+                        <form onSubmit={handleSearchPlace} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                          <input 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Add a custom place... (e.g. Kandy Lake)"
+                            disabled={isSearching}
+                            style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--gray-200)", fontSize: 13, outline: "none" }}
+                          />
+                          <button 
+                            type="submit" 
+                            disabled={isSearching || !searchQuery.trim()}
+                            style={{ background: "var(--teal)", color: "white", padding: "0 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, border: "none", cursor: (isSearching || !searchQuery.trim()) ? "not-allowed" : "pointer", opacity: (isSearching || !searchQuery.trim()) ? 0.6 : 1 }}
+                          >
+                            {isSearching ? "Searching..." : "Add to Route +"}
+                          </button>
+                        </form>
+                      )}
+
                       <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 380, overflowY: "auto", paddingRight: 8 }}>
                         {plannedStops.map((stop, i) => (
                            <div key={i} style={{ background: "var(--gray-50)", padding: 14, borderRadius: 12, border: "1px solid var(--gray-100)" }}>

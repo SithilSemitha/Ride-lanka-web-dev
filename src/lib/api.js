@@ -104,6 +104,17 @@ export async function getUserTrips(token) {
     return res.json();
 }
 
+export async function searchAndAddPlace(token, query) {
+    const url = `${BACKEND}/api/users/trips/search-place`;
+    const res = await safeFetch(url, {
+        method: "POST",
+        headers: await authHeaders(token),
+        body: JSON.stringify({ query }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
 export async function trackEvent(token, { place_name, category, action }) {
     // Fire-and-forget — don't block the UI
     const url = `${BACKEND}/api/events`;
