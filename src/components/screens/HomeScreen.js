@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "../Sidebar";
 import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { getRecommendations, refreshRecommendations, trackEvent, fetchPlaceCulture } from "@/lib/api";
 
 import highlandtain from "../assets/Highland Train Journey.jpg";
@@ -290,6 +291,25 @@ const [activeCategory, setActiveCategory] = useState("beach");
     setSelectedHomePlace(normalized);
   }
 
+  const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
+
+  function WishlistBtn({ card }) {
+    const normalized = { ...card, name: card.title, image: card.img };
+    const liked = isWishlisted(normalized);
+    return (
+      <button
+        className={`wishlist-btn ${liked ? "wishlisted" : ""}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          liked ? removeFromWishlist(card.title) : addToWishlist(normalized);
+        }}
+        title={liked ? "Remove from Wishlist" : "Add to Wishlist"}
+      >
+        {liked ? "❤️" : "🤍"}
+      </button>
+    );
+  }
+
   return (
     <div id="screen-home" className={`screen ${active ? "active" : ""}`}>
       <div className="main-layout">
@@ -327,6 +347,7 @@ const [activeCategory, setActiveCategory] = useState("beach");
                 <div className="card-img">
                   <img src={card.img} alt={card.title} />
                   <span className="card-badge">{card.badge}</span>
+                  <WishlistBtn card={card} />
                 </div>
                 <div className="card-body">
                   <h4>{card.title}</h4>
@@ -348,6 +369,7 @@ const [activeCategory, setActiveCategory] = useState("beach");
                 <div className="card-img">
                   <img src={card.img} alt={card.title} />
                   <span className="card-badge">{card.badge}</span>
+                  <WishlistBtn card={card} />
                 </div>
                 <div className="card-body">
                   <h4>{card.title}</h4>
