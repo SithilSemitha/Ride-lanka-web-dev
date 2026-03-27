@@ -1,5 +1,7 @@
 "use client";
 import { useSettings } from "@/context/SettingsContext";
+import logoPng from "@/components/assets/logo.png";
+
 
 export default function SplashScreen({ active, onGetStarted, onSignIn, onGuideSignIn }) {
   const { t } = useSettings();
@@ -11,7 +13,10 @@ export default function SplashScreen({ active, onGetStarted, onSignIn, onGuideSi
         </button>
       </div>
       <div className="splash-content">
-        <div className="splash-logo">🌍</div>
+        <div className="splash-logo">
+          <img src={logoPng?.src || logoPng} alt="Ride Lanka Logo" />
+        </div>
+
         <h1>
           {t("splashTitleLine1")}
           <br />
