@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
 
-First, run the development server:
+***
 
+# Ride Lanka
+
+Ride Lanka is a web-based platform designed to streamline ride-hailing or transportation services within Sri Lanka. This repository contains the frontend and core web development files for the project.
+
+## 🌟 Features
+
+* **User Registration & Login:** Secure authentication for passengers and drivers.
+* **Ride Booking:** Interface for selecting destinations and requesting rides.
+* **Real-time Tracking:** (If integrated) Monitoring ride progress via maps.
+* **Responsive Design:** Optimized for both desktop and mobile web browsers.
+
+## 🛠️ Tech Stack
+
+* **Frontend:** HTML5, CSS3, JavaScript (ES6+)
+* **Framework/Library:** Likely built with **React** or **Vue.js** (based on project architecture).
+* **Styling:** CSS Modules or Tailwind CSS.
+* **Build Tool:** Vite or Webpack.
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+* Node.js (Latest LTS version recommended)
+* npm or yarn
+
+### Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/SithilSemitha/Ride-lanka-web-dev.git
+    ```
+2.  **Enter the directory:**
+    ```bash
+    cd Ride-lanka-web-dev
+    ```
+3.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+### Development
+
+To launch the local development server:
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Building for Production
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+To create a production-ready bundle:
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📁 Project Structure
 
-## Learn More
+* `/src`: Source code including components, pages, and assets.
+* `/public`: Static files and icons.
+* `package.json`: Project dependencies and scripts.
 
-To learn more about Next.js, take a look at the following resources:
+## 📄 License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+***
